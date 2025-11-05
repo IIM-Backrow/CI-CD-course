@@ -1,14 +1,26 @@
 name: Lint commit messages
 on:
   push:
-  pull_request:
+  pull_request_target:
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   commitlint:
     name: Commit message lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout PR head (for forked PRs)
+        if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Checkout repository (non-fork PRs / pushes)
+        if: github.event_name != 'pull_request_target'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0

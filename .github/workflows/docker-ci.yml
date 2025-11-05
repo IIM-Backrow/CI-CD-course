@@ -76,9 +76,16 @@ jobs:
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
-      - name: Scan image with Trivy
+      - name: Scan image with Trivy (scan tar archive)
         run: |
-          trivy image --exit-code 1 --severity CRITICAL --format table ${{ needs.build-docker.outputs.image-name }}
+          # prefer scanning the saved tar artifact to avoid relying on image tags
+          if [ -f docker-image/image.tar ]; then
+            trivy image --input docker-image/image.tar --exit-code 1 --severity CRITICAL --format table
+          elif [ -f image.tar ]; then
+            trivy image --input image.tar --exit-code 1 --severity CRITICAL --format table
+          else
+            echo "No image tar found for scanning" && exit 2
+          fi
 
   push-docker:
     name: Push Docker image (tags only)

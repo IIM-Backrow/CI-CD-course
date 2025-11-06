@@ -74,6 +74,10 @@ jobs:
         working-directory: packages/client
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
+      - name: Install dependencies
+        working-directory: packages/client
+        run: npm ci
+
       - name: Build project artifacts
         working-directory: packages/client
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}

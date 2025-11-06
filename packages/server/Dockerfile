@@ -1,36 +1,35 @@
-# Build stage
-FROM node:18-alpine AS builder
+# Multi-stage Dockerfile for the backend
 
-WORKDIR /app
+# Stage 1: Build (install dev deps so tsc is available)
+FROM node:20.11.0-alpine AS build
+WORKDIR /workspace
 
-# Copy package files
-COPY package*.json ./
+# Copy only server package files first for reliable caching
+COPY package*.json .
 
-# Install all dependencies (including devDependencies for building)
-RUN npm ci
-
-# Copy source code
+# Copy the server source
 COPY . .
 
-# Build TypeScript
+WORKDIR /workspace
+
+# Install all dependencies (including devDependencies) so TypeScript compiler (tsc) is available
+RUN npm ci
+
+# Build the application (will use the locally installed tsc)
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
-
+# Stage 2: Production
+FROM node:20.11.0-alpine AS prod
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy build artifacts (use absolute path from build stage)
+COPY --from=build /workspace/dist ./dist
 
-# Install production dependencies only
-RUN npm ci --only=production
+# Copy package files to install production deps only (from build stage)
+COPY --from=build /workspace/package*.json ./
 
-# Copy built application from builder
-COPY --from=builder /app/dist ./dist
+# Install only production dependencies
+RUN npm ci --omit=dev
 
-# Expose port
 EXPOSE 3001
-
-# Start the application
-CMD ["npm", "start"]
+CMD [ "node", "dist/index.js" ]

@@ -8,6 +8,16 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint for CI/CD smoke tests
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+// Root endpoint with welcome message
+app.get('/', (req, res) => {
+  res.json({ message: 'Welcome to Todo API' });
+});
+
 app.get('/api/todos', async (req, res) => {
   const todos = await getAllTodos();
   res.json(todos);
@@ -32,3 +42,5 @@ app.delete('/api/todos/:id', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+export { app };

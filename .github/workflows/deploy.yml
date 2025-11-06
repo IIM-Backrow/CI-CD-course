@@ -47,6 +47,9 @@ jobs:
   deploy-frontend:
     name: Deploy frontend to Vercel
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     outputs:
       deployment_url: ${{ steps.deploy.outputs.deployment_url }}
     steps:
@@ -62,6 +65,10 @@ jobs:
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
+
+      - name: Link to existing Vercel project
+        working-directory: packages/client
+        run: vercel link --yes --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Pull Vercel environment information
         working-directory: packages/client

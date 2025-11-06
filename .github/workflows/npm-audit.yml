@@ -20,6 +20,7 @@ jobs:
         with:
           audit_level: high
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          working_directory: ./packages/client
 
   scan-backend:
     name: npm audit backend
@@ -35,3 +36,4 @@ jobs:
           with:
             audit_level: high
             github_token: ${{ secrets.GITHUB_TOKEN }}
+            working_directory: ./packages/server

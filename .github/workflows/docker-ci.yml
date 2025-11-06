@@ -4,10 +4,10 @@ on:
   pull_request:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 env:
-  DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
+  DOCKERHUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY }}
 
 jobs:
   build-docker:
@@ -24,10 +24,10 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG_NAME=${GITHUB_REF#refs/tags/}
-            IMAGE="${{ secrets.DOCKERHUB_REPOSITORY }}:${TAG_NAME}"
+            IMAGE="${{ vars.DOCKERHUB_REPOSITORY }}:${TAG_NAME}"
           else
             SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
-            IMAGE="${{ secrets.DOCKERHUB_REPOSITORY }}:pr-${SHORT_SHA}"
+            IMAGE="${{ vars.DOCKERHUB_REPOSITORY }}:pr-${SHORT_SHA}"
           fi
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
 

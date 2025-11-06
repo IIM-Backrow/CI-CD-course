@@ -29,8 +29,9 @@ app.delete('/api/todos/:id', async (req, res) => {
   res.json(result);
 });
 
-app.get('/FAILME', (req, res) => {
-  throw new Error('Intentional Failure');
+// Test route that intentionally fails for Sentry validation
+app.get('/fail', (req, res) => {
+  throw new Error('Intentional error for Sentry testing - this should appear in GitHub Actions logs and Sentry dashboard');
 });
 
 app.listen(PORT, () => {

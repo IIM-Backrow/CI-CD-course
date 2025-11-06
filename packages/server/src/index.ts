@@ -29,6 +29,10 @@ app.delete('/api/todos/:id', async (req, res) => {
   res.json(result);
 });
 
+app.get('/FAILME', (req, res) => {
+  throw new Error('Intentional Failure');
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

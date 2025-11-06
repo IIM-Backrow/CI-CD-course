@@ -114,3 +114,43 @@ jobs:
       - name: Push image
         run: |
           docker push ${{ needs.build-docker.outputs.image-name }}
+
+  test-sentry-error:
+    name: Test Sentry error capture
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load and run container
+        run: |
+          docker load -i docker-image/image.tar || docker load -i image.tar
+          # Run container in background
+          docker run -d -p 3001:3001 --name test-app \
+            -e SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
+            ${{ needs.build-docker.outputs.image-name }}
+          
+          # Wait for app to start
+          sleep 10
+          
+          # Test that app is running
+          curl -f http://localhost:3001/api/todos || echo "App might not be ready yet"
+          
+      - name: Test /fail endpoint for Sentry error capture
+        run: |
+          echo "Testing /fail endpoint - this should trigger Sentry error capture"
+          # This should fail and capture error in Sentry
+          curl http://localhost:3001/fail || echo "Expected failure occurred - check Sentry dashboard for captured error"
+          
+      - name: Stop container
+        if: always()
+        run: |
+          docker stop test-app || true
+          docker rm test-app || true

@@ -6,8 +6,11 @@ on:
     branches:
       - main
 jobs:
-  scan:
-    name: npm audit
+  scan-frontend:
+    name: npm audit frontend
+    defaults:
+      run:
+        working-directory: ./packages/client
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,3 +20,18 @@ jobs:
         with:
           audit_level: high
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  scan-backend:
+    name: npm audit backend
+    defaults:
+      run:
+        working-directory: ./packages/server
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v4
+        - name: install dependencies
+          run: npm ci
+        - uses: oke-py/npm-audit-action@v3
+          with:
+            audit_level: high
+            github_token: ${{ secrets.GITHUB_TOKEN }}

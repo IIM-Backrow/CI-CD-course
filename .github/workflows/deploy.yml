@@ -109,41 +109,70 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Wait for services to be ready
-        run: sleep 30
-
       - name: Test frontend health
         run: |
           echo "Testing frontend at: ${{ needs.deploy-frontend.outputs.deployment_url }}"
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "${{ needs.deploy-frontend.outputs.deployment_url }}")
-          if [ "$RESPONSE" -eq 200 ]; then
-            echo "Frontend is healthy (HTTP $RESPONSE)"
-          else
-            echo "Frontend health check failed (HTTP $RESPONSE)"
-            exit 1
-          fi
+          MAX_RETRIES=12
+          RETRY_INTERVAL=5
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES - Checking frontend health..."
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "x-vercel-protection-bypass: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}" \
+              "${{ needs.deploy-frontend.outputs.deployment_url }}")
+
+            if [ "$RESPONSE" -eq 200 ]; then
+              echo "✓ Frontend is healthy (HTTP $RESPONSE)"
+              exit 0
+            fi
+
+            echo "Frontend not ready yet (HTTP $RESPONSE). Retrying in ${RETRY_INTERVAL}s..."
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              sleep $RETRY_INTERVAL
+            fi
+          done
+
+          echo "✗ Frontend health check failed after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Test backend health
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
           echo "Testing backend health endpoint"
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/health" || echo "000")
-          if [ "$RESPONSE" -eq 200 ]; then
-            echo "Backend is healthy (HTTP $RESPONSE)"
-          elif [ "$RESPONSE" -eq 404 ]; then
-            echo "Backend is responding but /health endpoint not found. Testing root endpoint..."
-            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/" || echo "000")
-            if [ "$RESPONSE" -ge 200 ] && [ "$RESPONSE" -lt 400 ]; then
-              echo "Backend is responding (HTTP $RESPONSE)"
-            else
-              echo "Backend health check failed (HTTP $RESPONSE)"
-              exit 1
+          MAX_RETRIES=12
+          RETRY_INTERVAL=5
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES - Checking backend health..."
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/health" || echo "000")
+
+            if [ "$RESPONSE" -eq 200 ]; then
+              echo "✓ Backend is healthy (HTTP $RESPONSE)"
+              exit 0
+            elif [ "$RESPONSE" -eq 404 ]; then
+              echo "Backend /health endpoint not found. Testing root endpoint..."
+              RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/" || echo "000")
+              if [ "$RESPONSE" -ge 200 ] && [ "$RESPONSE" -lt 400 ]; then
+                echo "✓ Backend is responding (HTTP $RESPONSE)"
+                exit 0
+              fi
             fi
-          else
-            echo "Backend health check failed (HTTP $RESPONSE)"
-            exit 1
-          fi
+
+            echo "Backend not ready yet (HTTP $RESPONSE). Retrying in ${RETRY_INTERVAL}s..."
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              sleep $RETRY_INTERVAL
+            fi
+          done
+
+          echo "✗ Backend health check failed after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Test API integration
         env:
